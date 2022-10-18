@@ -410,6 +410,12 @@ static int parse_SX130x_configuration(const char * conf_file) {
         MSG("WARNING: Data type for full_duplex seems wrong, please check\n");
         boardconf.full_duplex = false;
     }
+    str = json_object_get_string(conf_obj, "i2c_path");
+    if (str == NULL) {
+        str = "/dev/i2c-0";
+    }
+    strncpy(boardconf.i2c_path, str, sizeof boardconf.i2c_path);
+    boardconf.i2c_path[sizeof boardconf.i2c_path - 1] = '\0'; /* ensure string termination */
     MSG("INFO: com_type %s, com_path %s, lorawan_public %d, clksrc %d, full_duplex %d\n", (boardconf.com_type == LGW_COM_SPI) ? "SPI" : "USB", boardconf.com_path, boardconf.lorawan_public, boardconf.clksrc, boardconf.full_duplex);
     /* all parameters parsed, submitting configuration to the HAL */
     if (lgw_board_setconf(&boardconf) != LGW_HAL_SUCCESS) {
