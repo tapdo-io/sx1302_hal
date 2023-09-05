@@ -1486,6 +1486,7 @@ int main(int argc, char ** argv)
     /* SX1302 data variables */
     uint32_t trig_tstamp;
     uint32_t inst_tstamp;
+    uint32_t last_inst_tstamp = 0;
     uint64_t eui;
     float temperature;
 
@@ -1896,6 +1897,33 @@ int main(int argc, char ** argv)
         }
         report_ready = true;
         pthread_mutex_unlock(&mx_stat_rep);
+
+        if (inst_tstamp == last_inst_tstamp) {
+            printf("### Instant timestamp hanging - resetting ###\n");
+            pthread_mutex_lock(&mx_concent);
+            if (com_type == LGW_COM_SPI) {
+                /* Board reset */
+                if (system("./reset_lgw.sh start") != 0) {
+                    printf("ERROR: failed to reset SX1302, check your reset_lgw.sh script\n");
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                printf("ERROR: can only reset in SPI mode - exiting\n");
+                break;
+            }
+
+            /* starting the concentrator */
+            i = lgw_start();
+            if (i == LGW_HAL_SUCCESS) {
+                MSG("INFO: [main] concentrator started, packet can now be received\n");
+            } else {
+                MSG("ERROR: [main] failed to start the concentrator\n");
+                exit(EXIT_FAILURE);
+            }
+            pthread_mutex_unlock(&mx_concent);
+        }
+        last_inst_tstamp = inst_tstamp;
+
     }
 
     /* wait for all threads with a COM with the concentrator board to finish (1 fetch cycle max) */
